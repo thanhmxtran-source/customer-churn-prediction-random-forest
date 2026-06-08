@@ -1,0 +1,82 @@
+---
+title: "Customer Churn Prediction Group Project - Random Forest"
+author: "Thanh Tran"
+date: "2025-04-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##1. Loading packages: loading caret (predictive modeling), dplyr (data wrangling), ranger (random forest algorithm)
+```{r}
+library(caret)
+library(dplyr)
+library(ranger)
+```
+
+##2. Importing data
+```{r}
+ecommercechurn <- read.csv("C:/Users/ThanhT24/Downloads/OIM 454/E Commerce Dataset For Final Project.csv")
+```
+
+##3. Exploring data
+```{r}
+head(ecommercechurn)
+nrow(ecommercechurn)
+```
+
+##4. Pre-process data for binary classification
+```{r}
+ecommercechurn$Churn <- factor(ecommercechurn$Churn, levels = c(0, 1))
+head(ecommercechurn)
+```
+
+##5. Partition training and validation sets: 80% of data randomly allocated to training
+80% of the data (3,220 records) goes into the training dataset, while the remaining 20% (805 records) to validation and test from the original dataset consists of 4,025 records.
+```{r}
+sample <- sample.int(n = nrow(ecommercechurn), size = nrow(ecommercechurn)*0.80, replace = F)
+
+ecommercechurn_training <- ecommercechurn[sample, ] ##Yields training dataset that is the training percentage % 
+
+ecommercechurn_validationtest <- ecommercechurn[-sample, ] ##Yields validation dataset
+```
+```{r}
+nrow(ecommercechurn_training)
+nrow(ecommercechurn_validationtest)
+```
+Among the 20%, 10% to the validation set, which is equivalent to 402 records, and the remaining 10% consists of 403 records to the test set.
+```{r}
+sample <- sample.int(n = nrow(ecommercechurn_validationtest), size = nrow(ecommercechurn_validationtest)*0.50, replace = F) ##Validation percentage = what percentage of this validation + test block should go into validation
+ecommercechurn_validation <- ecommercechurn_validationtest[sample, ] ##Yields validation dataset
+ecommercechurn_test <- ecommercechurn_validationtest[-sample, ] ##Yields test portion
+```
+```{r}
+nrow(ecommercechurn_validation)
+nrow(ecommercechurn_test)
+```
+
+##6. Train random forest model
+Using non-normalized data to training RF model. Only necessary to normalize data for kNN in this context.
+```{r}
+rf_fit <- train(Churn ~ ., data = ecommercechurn_training, method = "ranger") ##Does not need to use normalized data so using original training partition
+rf_fit
+```
+
+##7. Generate random forest predictions on validation data and test data (data does not need to be normalized)
+Making predictions on non-normalized validation data.
+```{r}
+rf_validation_predictions <- predict(rf_fit, ecommercechurn_validation)
+```
+```{r}
+rf_test_predictions <- predict(rf_fit, ecommercechurn_test)
+```
+The model performed strongly on both validation and test sets. On the validation set, it achieved 98.51% accuracy, 93.55% sensitivity, 99.41% specificity, and 96.67% precision. On the test set, accuracy, specificity, and precision decreased slightly to 97.52%, 98.15%, and 92.50%, respectively, while sensitivity improved to 94.87%. Overall, the results indicate that the model generalizes well and remains highly effective at identifying both churned and non-churned customers.
+```{r}
+confusionMatrix(rf_validation_predictions, ecommercechurn_validation$Churn,positive="1") ##Random forest validation predictions 
+```
+
+```{r}
+confusionMatrix(rf_test_predictions, ecommercechurn_test$Churn,positive="1") ##Random forest test predictions 
+```
